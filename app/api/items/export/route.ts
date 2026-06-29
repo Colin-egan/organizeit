@@ -70,11 +70,12 @@ export async function GET() {
       try {
         const res = await fetch(photoUrl);
         if (res.ok) {
-          const buffer = Buffer.from(await res.arrayBuffer());
+          const rawBuffer: Buffer = Buffer.from(await res.arrayBuffer());
           const contentType = res.headers.get("content-type") ?? "image/jpeg";
           const ext = contentType.includes("png") ? "png" : contentType.includes("gif") ? "gif" : "jpeg";
 
-          const imageId = workbook.addImage({ buffer: new Uint8Array(buffer), extension: ext as "jpeg" | "png" | "gif" });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const imageId = workbook.addImage({ buffer: rawBuffer as any, extension: ext as "jpeg" | "png" | "gif" });
           sheet.addImage(imageId, {
             tl: { col: IMAGE_COL - 1, row: rowNum - 1 } as ExcelJS.Anchor,
             br: { col: IMAGE_COL, row: rowNum } as ExcelJS.Anchor,
