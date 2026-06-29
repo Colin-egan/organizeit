@@ -52,11 +52,11 @@ export default function AddPage() {
     setError("");
 
     try {
-      const base64 = await fileToBase64(file);
+      const { base64, mimeType } = await fileToBase64(file);
       const res = await fetch("/api/identify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64, mimeType: file.type }),
+        body: JSON.stringify({ imageBase64: base64, mimeType }),
       });
       if (!res.ok) throw new Error("Identification failed");
       const result: AiResult = await res.json();
@@ -240,14 +240,29 @@ export default function AddPage() {
   );
 }
 
-function fileToBase64(file: File): Promise<string> {
+function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(",")[1]);
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      // Scale down to max 1600px on longest side to keep payload manageable
+      const MAX = 1600;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        const scale = MAX / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
     };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    img.onerror = reject;
+    img.src = url;
   });
 }
