@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { removeBackground } from "@imgly/background-removal";
 
 type AiResult = {
   name: string;
@@ -27,6 +28,7 @@ export default function AddPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [identifying, setIdentifying] = useState(false);
+  const [removingBg, setRemovingBg] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -37,13 +39,24 @@ export default function AddPage() {
   });
   const [identified, setIdentified] = useState(false);
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
     setFile(f);
     setPreview(URL.createObjectURL(f));
     setIdentified(false);
     setError("");
+    setRemovingBg(true);
+    try {
+      const transparentBlob = await removeBackground(f);
+      const processedFile = await compositeOnWhite(transparentBlob);
+      setFile(processedFile);
+      setPreview(URL.createObjectURL(processedFile));
+    } catch {
+      // If bg removal fails, keep original image
+    } finally {
+      setRemovingBg(false);
+    }
   }
 
   async function handleIdentify() {
@@ -147,8 +160,14 @@ export default function AddPage() {
               alt="Item preview"
               width={600}
               height={400}
-              className="w-full h-64 object-cover rounded-xl"
+              className="w-full h-64 object-contain rounded-xl bg-white"
             />
+            {removingBg && (
+              <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center rounded-xl gap-2">
+                <div className="w-8 h-8 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm font-medium text-zinc-700">Removing background…</span>
+              </div>
+            )}
             <button
               onClick={() => { setPreview(null); setFile(null); setIdentified(false); }}
               className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm hover:bg-black/70"
@@ -169,7 +188,7 @@ export default function AddPage() {
         {preview && !identified && (
           <button
             onClick={handleIdentify}
-            disabled={identifying}
+            disabled={identifying || removingBg}
             className="mt-4 w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 transition-colors"
           >
             {identifying ? "Identifying…" : "Identify with AI"}
@@ -238,6 +257,29 @@ export default function AddPage() {
       )}
     </div>
   );
+}
+
+function compositeOnWhite(blob: Blob): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new window.Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((b) => {
+        if (!b) { reject(new Error("Canvas toBlob failed")); return; }
+        resolve(new File([b], "photo.jpg", { type: "image/jpeg" }));
+      }, "image/jpeg", 0.92);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
