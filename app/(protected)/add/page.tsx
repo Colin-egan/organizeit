@@ -53,7 +53,7 @@ export default function AddPage() {
       setFile(processedFile);
       setPreview(URL.createObjectURL(processedFile));
     } catch {
-      // If bg removal fails, keep original image
+      // keep original if bg removal fails
     } finally {
       setRemovingBg(false);
     }
@@ -118,143 +118,234 @@ export default function AddPage() {
     }
   }
 
-  function field(key: keyof typeof form, label: string, type = "text") {
-    return (
-      <div key={key}>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">{label}</label>
-        <input
-          type={type}
-          value={form[key] as string}
-          onChange={(e) =>
-            setForm((f) => ({
-              ...f,
-              [key]: type === "number" ? parseFloat(e.target.value) || 0 : e.target.value,
-            }))
-          }
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500"
-        />
-      </div>
-    );
-  }
+  const showForm = identified || preview;
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-zinc-900 mb-6">Add Item</h1>
-
-      {/* Photo section */}
-      <div className="bg-white rounded-2xl border border-zinc-200 p-6 mb-4">
-        <p className="text-sm font-medium text-zinc-700 mb-3">Photo</p>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-
-        {preview ? (
-          <div className="relative">
-            <Image
-              src={preview}
-              alt="Item preview"
-              width={600}
-              height={400}
-              className="w-full h-64 object-contain rounded-xl bg-white"
-            />
-            {removingBg && (
-              <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center rounded-xl gap-2">
-                <div className="w-8 h-8 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm font-medium text-zinc-700">Removing background…</span>
-              </div>
-            )}
-            <button
-              onClick={() => { setPreview(null); setFile(null); setIdentified(false); }}
-              className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm hover:bg-black/70"
-            >
-              ✕
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full h-48 rounded-xl border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center gap-2 text-zinc-400 hover:border-zinc-400 hover:text-zinc-500 transition-colors"
-          >
-            <span className="text-4xl">📷</span>
-            <span className="text-sm font-medium">Tap to take photo or upload</span>
-          </button>
-        )}
-
-        {preview && !identified && (
-          <button
-            onClick={handleIdentify}
-            disabled={identifying || removingBg}
-            className="mt-4 w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 transition-colors"
-          >
-            {identifying ? "Identifying…" : "Identify with AI"}
-          </button>
-        )}
+    <div className="max-w-3xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-stone-900 tracking-tight">Add item</h1>
+        <p className="text-sm text-stone-400 mt-1">
+          Take a photo — AI identifies everything automatically.
+        </p>
       </div>
 
-      {/* Form section — shown after identification or can be filled manually */}
-      {(identified || preview) && (
-        <form onSubmit={handleSave} className="bg-white rounded-2xl border border-zinc-200 p-6 flex flex-col gap-4">
-          <p className="text-sm font-medium text-zinc-700">
-            {identified ? "Review and edit details" : "Fill in details manually"}
-          </p>
+      <div className={`${showForm && preview ? "lg:grid lg:grid-cols-2 lg:gap-6" : ""}`}>
+        {/* Left: Photo */}
+        <div className="flex flex-col gap-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleFileChange}
+          />
 
-          {field("name", "Name *")}
-          {field("location", "Location (e.g. Garage shelf 2)")}
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">Condition</label>
-            <select
-              value={form.condition}
-              onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
-            >
-              {CONDITIONS.map((c) => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-
-          {field("estimatedValue", "Estimated Value ($)", "number")}
-          {field("category", "Category")}
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">Description</label>
-            <textarea
-              rows={3}
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 resize-none"
-            />
-          </div>
-
-          <details className="group">
-            <summary className="text-sm text-zinc-500 cursor-pointer hover:text-zinc-700 list-none flex items-center gap-1">
-              <span className="group-open:rotate-90 transition-transform inline-block">▶</span>
-              eBay aspects (brand, model, color…)
-            </summary>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {field("brand", "Brand")}
-              {field("model", "Model")}
-              {field("color", "Color")}
-              {field("material", "Material")}
-              {field("size", "Size")}
+          {preview ? (
+            <div className="relative rounded-2xl overflow-hidden bg-white border border-stone-200 shadow-sm">
+              <Image
+                src={preview}
+                alt="Item preview"
+                width={600}
+                height={500}
+                className="w-full h-72 lg:h-80 object-contain bg-stone-50"
+              />
+              {removingBg && (
+                <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center gap-3">
+                  <div className="w-8 h-8 border-2 border-stone-200 border-t-indigo-600 rounded-full animate-spin" />
+                  <span className="text-sm font-medium text-stone-600">Removing background…</span>
+                </div>
+              )}
+              <button
+                onClick={() => { setPreview(null); setFile(null); setIdentified(false); }}
+                className="absolute top-3 right-3 w-8 h-8 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center text-xs backdrop-blur-sm transition-colors"
+                aria-label="Remove photo"
+              >
+                ✕
+              </button>
             </div>
-          </details>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full h-64 lg:h-80 rounded-2xl border-2 border-dashed border-stone-200 hover:border-indigo-400 bg-white hover:bg-indigo-50/30 flex flex-col items-center justify-center gap-3 text-stone-400 hover:text-indigo-500 transition-all duration-200 group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-stone-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                  <rect x="1" y="5" width="20" height="15" rx="3" stroke="currentColor" strokeWidth="1.5"/>
+                  <circle cx="11" cy="13" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M8 5l1.5-3h3L14 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium">Take photo or upload</p>
+                <p className="text-xs text-stone-400 mt-0.5">AI will identify the item</p>
+              </div>
+            </button>
+          )}
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {preview && !identified && (
+            <button
+              onClick={handleIdentify}
+              disabled={identifying || removingBg}
+              className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 active:scale-[0.98] transition-all shadow-md shadow-indigo-900/20 flex items-center justify-center gap-2"
+            >
+              {identifying ? (
+                <>
+                  <span className="w-4 h-4 border border-indigo-300 border-t-white rounded-full animate-spin" />
+                  Identifying…
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 1l1.5 3.5L13 6l-2.5 2.5L11 12l-3-1.5L5 12l.5-3.5L3 6l3.5-1.5L8 1Z" stroke="white" strokeWidth="1.25" strokeLinejoin="round"/>
+                  </svg>
+                  Identify with AI
+                </>
+              )}
+            </button>
+          )}
+        </div>
 
-          <button
-            type="submit"
-            disabled={saving || !form.name}
-            className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 transition-colors"
-          >
-            {saving ? "Saving…" : "Save to catalog"}
-          </button>
-        </form>
-      )}
+        {/* Right: Form */}
+        {showForm && (
+          <form onSubmit={handleSave} className="flex flex-col gap-4 mt-4 lg:mt-0">
+            {identified && (
+              <div className="flex items-center gap-2 rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2.5">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-indigo-500 shrink-0">
+                  <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.25"/>
+                  <path d="M4.5 7l2 2L9.5 5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <p className="text-xs font-medium text-indigo-700">AI identified — review and edit below</p>
+              </div>
+            )}
+
+            <Field label="Name *">
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Vintage Levi's Jacket"
+                className={inputCls}
+              />
+            </Field>
+
+            <Field label="Location">
+              <input
+                type="text"
+                value={form.location}
+                onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                placeholder="e.g. Attic shelf 2"
+                className={inputCls}
+              />
+            </Field>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Condition">
+                <select
+                  value={form.condition}
+                  onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
+                  className={inputCls}
+                >
+                  {CONDITIONS.map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </Field>
+
+              <Field label="Est. Value ($)">
+                <input
+                  type="number"
+                  value={form.estimatedValue || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, estimatedValue: parseFloat(e.target.value) || 0 }))}
+                  placeholder="0"
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+
+            <Field label="Category">
+              <input
+                type="text"
+                value={form.category}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                placeholder="e.g. Clothing, Electronics"
+                className={inputCls}
+              />
+            </Field>
+
+            <Field label="Description">
+              <textarea
+                rows={3}
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Describe the item…"
+                className={`${inputCls} resize-none`}
+              />
+            </Field>
+
+            <details className="group">
+              <summary className="text-xs font-medium text-stone-400 uppercase tracking-widest cursor-pointer hover:text-stone-600 list-none flex items-center gap-1.5 select-none">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  className="group-open:rotate-90 transition-transform"
+                >
+                  <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                eBay listing details
+              </summary>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {(["brand", "model", "color", "material", "size"] as const).map((key) => (
+                  <Field key={key} label={key.charAt(0).toUpperCase() + key.slice(1)}>
+                    <input
+                      type="text"
+                      value={form[key]}
+                      onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                      className={inputCls}
+                    />
+                  </Field>
+                ))}
+              </div>
+            </details>
+
+            {error && (
+              <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2.5 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={saving || !form.name}
+              className="rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-40 active:scale-[0.98] transition-all shadow-md shadow-indigo-900/20 flex items-center justify-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <span className="w-4 h-4 border border-indigo-300 border-t-white rounded-full animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save to catalog"
+              )}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const inputCls =
+  "w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-stone-500 uppercase tracking-wider mb-1.5">
+        {label}
+      </label>
+      {children}
     </div>
   );
 }
@@ -288,7 +379,6 @@ function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }>
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      // Scale down to max 1600px on longest side to keep payload manageable
       const MAX = 1600;
       let { width, height } = img;
       if (width > MAX || height > MAX) {

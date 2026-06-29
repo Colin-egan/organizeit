@@ -27,14 +27,14 @@ export default function DeleteItemButton({ itemId }: { itemId: string }) {
         <button
           onClick={handleDelete}
           disabled={loading}
-          className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+          className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500 active:scale-[0.97] transition-all disabled:opacity-50"
         >
           {loading ? "Deleting…" : "Confirm delete"}
         </button>
         <button
           onClick={() => setConfirming(false)}
           disabled={loading}
-          className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
+          className="rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50 active:scale-[0.97] transition-all"
         >
           Cancel
         </button>
@@ -45,9 +45,9 @@ export default function DeleteItemButton({ itemId }: { itemId: string }) {
   return (
     <button
       onClick={() => setConfirming(true)}
-      className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+      className="text-sm text-stone-400 hover:text-red-600 transition-colors"
     >
-      Delete
+      Delete item
     </button>
   );
 }
