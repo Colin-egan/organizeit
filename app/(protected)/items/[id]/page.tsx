@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import DeleteItemButton from "@/components/DeleteItemButton";
 
 export default async function ItemDetailPage({
   params,
@@ -108,6 +109,9 @@ export default async function ItemDetailPage({
                 View on eBay ↗
               </a>
             )}
+          </div>
+          <div className="mt-3">
+            <DeleteItemButton itemId={item.id} />
           </div>
         </div>
       </div>
