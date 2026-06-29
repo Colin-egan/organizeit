@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 const COLUMNS = [
-  "id", "name", "category", "description", "condition",
+  "image", "id", "name", "category", "description", "condition",
   "estimated_value", "location", "status", "tags", "created_at",
 ];
 
@@ -22,15 +22,22 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("items")
-    .select("id, name, category, description, condition, estimated_value, location, status, tags, created_at")
+    .select("id, name, category, description, condition, estimated_value, location, status, tags, created_at, photo_url")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const rows = (data ?? []).map((item) =>
-    COLUMNS.map((col) => escapeCell((item as Record<string, unknown>)[col])).join(",")
-  );
+  const rows = (data ?? []).map((item) => {
+    const record = item as Record<string, unknown>;
+    return COLUMNS.map((col) => {
+      if (col === "image") {
+        const url = record["photo_url"];
+        return url ? `"=IMAGE(""${url}"")"` : "";
+      }
+      return escapeCell(record[col]);
+    }).join(",");
+  });
 
   const csv = [COLUMNS.join(","), ...rows].join("\n");
 
